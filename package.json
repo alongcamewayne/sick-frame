@@ -1,0 +1,18 @@
+{
+	"name": "sick-frame-lib",
+	"type": "module",
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"format": "prettier --write ."
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"prettier": "^3.5.1"
+	}
+}
