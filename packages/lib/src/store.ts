@@ -60,36 +60,39 @@ export const frameStore = create<FrameStore>()(
 			if (get().isSdkLoaded || get().isLoading) return;
 			set({ isLoading: true });
 
+			const context = await sdk.context;
 			try {
 				set({
-					isSdkLoaded: true,
+					isSdkLoaded: !!context,
 					isLoading: false,
-					context: await sdk.context,
+					context: context,
 				});
 
-				registerFrameEventListeners(sdk);
+				if (context) {
+					registerFrameEventListeners(sdk);
 
-				const storedOnLoad = get().onLoad;
-				if (storedOnLoad && !get().hasRunOnLoad) {
-					try {
-						storedOnLoad(sdk);
-						set({ hasRunOnLoad: true });
-					} catch (error) {
-						console.error('🔴 Error in onLoad callback:', error);
-					}
-				}
-
-				// immediately call ready && onReady if deferReady was not explicitly set
-				if (!get().deferReady) {
-					sdk.actions.ready(get().options);
-
-					const storedOnReady = get().onReady;
-					if (storedOnReady && !get().hasRunOnReady) {
+					const storedOnLoad = get().onLoad;
+					if (storedOnLoad && !get().hasRunOnLoad) {
 						try {
-							storedOnReady(sdk);
-							set({ hasRunOnReady: true });
+							storedOnLoad(sdk);
+							set({ hasRunOnLoad: true });
 						} catch (error) {
-							console.error('🔴 Error in onReady callback:', error);
+							console.error('🔴 Error in onLoad callback:', error);
+						}
+					}
+
+					// immediately call ready && onReady if deferReady was not explicitly set
+					if (!get().deferReady) {
+						sdk.actions.ready(get().options);
+
+						const storedOnReady = get().onReady;
+						if (storedOnReady && !get().hasRunOnReady) {
+							try {
+								storedOnReady(sdk);
+								set({ hasRunOnReady: true });
+							} catch (error) {
+								console.error('🔴 Error in onReady callback:', error);
+							}
 						}
 					}
 				}
