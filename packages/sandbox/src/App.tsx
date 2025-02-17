@@ -1,4 +1,5 @@
-import { useFrameActions, useFrameContext } from 'sick-frame';
+import { useEffect } from 'react';
+import { useFrameActions, useFrameContext, useFrameSdk } from 'sick-frame';
 
 function randomString(length = 8) {
 	return [...Array(length)]
@@ -7,8 +8,13 @@ function randomString(length = 8) {
 }
 
 function App() {
+	const { isSdkLoaded } = useFrameSdk();
 	const { user } = useFrameContext();
 	const { signIn } = useFrameActions();
+
+	useEffect(() => {
+		console.log('isSdkLoaded', isSdkLoaded);
+	}, [isSdkLoaded]);
 
 	async function handleSignIn() {
 		const result = await signIn({ nonce: randomString() });
