@@ -18,7 +18,7 @@
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
-		"@farcaster/frame-sdk": "^0.0.27",
+		"@farcaster/frame-sdk": "^0.0.29",
 		"immer": "^10.1.1",
 		"mitt": "^3.0.1",
 		"zustand": "^5.0.3"

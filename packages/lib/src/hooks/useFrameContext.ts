@@ -1,17 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFrameSdk } from './useFrameSdk';
+import { useStore } from 'zustand';
+import { frameStore } from '../store';
 
 export function useFrameContext() {
-	const { context } = useFrameSdk();
-
-	return useMemo(
-		() => ({
-			client: context?.client,
-			user: context?.user,
-			location: context?.location,
-		}),
-		[context]
-	);
+	const { context } = useStore(frameStore, (state) => state);
+	return context;
 }

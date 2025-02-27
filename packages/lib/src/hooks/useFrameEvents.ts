@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import mitt from 'mitt';
 import type { EventMap, FrameSDK } from '@farcaster/frame-sdk/dist/types';
 import { useFrameSdk } from './useFrameSdk';
+import { frameStore } from '../store';
 
 // assumes EventMap will only contain function with a single argument
 type FirstArg<T> = T extends (arg: infer P, ...args: unknown[]) => unknown ? P : void;
@@ -20,27 +21,35 @@ export type FrameEventHandlers = Partial<{
 export const events = mitt<FrameEvents>();
 
 export function registerFrameEventListeners(sdk: FrameSDK) {
-	sdk.on('frameAdded', (data: FrameEvents['onFrameAdded']) =>
-		events.emit('onFrameAdded', { notificationDetails: data.notificationDetails })
-	);
+	sdk.on('frameAdded', (data: FrameEvents['onFrameAdded']) => {
+		frameStore.setState({ isFrameAdded: true });
+		events.emit('onFrameAdded', { notificationDetails: data.notificationDetails });
+	});
 
-	sdk.on('frameAddRejected', (data: FrameEvents['onFrameAddRejected']) =>
-		events.emit('onFrameAddRejected', { reason: data.reason })
-	);
+	sdk.on('frameAddRejected', (data: FrameEvents['onFrameAddRejected']) => {
+		events.emit('onFrameAddRejected', { reason: data.reason });
+	});
 
-	sdk.on('frameRemoved', () => events.emit('onFrameRemoved'));
+	sdk.on('frameRemoved', () => {
+		frameStore.setState({ isFrameAdded: false });
+		events.emit('onFrameRemoved');
+	});
 
-	sdk.on('notificationsEnabled', (data: FrameEvents['onNotificationsEnabled']) =>
-		events.emit('onNotificationsEnabled', { notificationDetails: data.notificationDetails })
-	);
+	sdk.on('notificationsEnabled', (data: FrameEvents['onNotificationsEnabled']) => {
+		events.emit('onNotificationsEnabled', { notificationDetails: data.notificationDetails });
+	});
 
-	sdk.on('notificationsDisabled', () => events.emit('onNotificationsDisabled'));
+	sdk.on('notificationsDisabled', () => {
+		events.emit('onNotificationsDisabled');
+	});
 
-	sdk.on('primaryButtonClicked', () => events.emit('onPrimaryButtonClicked'));
+	sdk.on('primaryButtonClicked', () => {
+		events.emit('onPrimaryButtonClicked');
+	});
 }
 
 export function useFrameEvents(handlers: FrameEventHandlers) {
-	const { isSdkLoaded } = useFrameSdk();
+	const { isFrame } = useFrameSdk();
 	const handlersRef = useRef(handlers);
 
 	// keep ref up to date without triggering re-renders
@@ -49,7 +58,7 @@ export function useFrameEvents(handlers: FrameEventHandlers) {
 	}, [handlers]);
 
 	useEffect(() => {
-		if (!isSdkLoaded) return;
+		if (!isFrame) return;
 
 		const eventEntries = Object.entries(handlersRef.current) as Array<
 			[keyof FrameEvents, (data: unknown) => void]
@@ -60,5 +69,5 @@ export function useFrameEvents(handlers: FrameEventHandlers) {
 		return () => {
 			eventEntries.forEach(([event, handler]) => events.off(event, handler));
 		};
-	}, [isSdkLoaded]);
+	}, [isFrame]);
 }

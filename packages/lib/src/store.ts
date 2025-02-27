@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import sdk, { type Context, type ReadyOptions } from '@farcaster/frame-sdk/';
+import sdk, { type Context } from '@farcaster/frame-sdk/';
 import type { FrameSDK } from '@farcaster/frame-sdk/dist/types';
 import { registerFrameEventListeners } from './hooks/useFrameEvents';
 
@@ -9,14 +9,12 @@ export type FrameStore = {
 	isSdkLoaded: boolean;
 	loadSdk: () => void;
 	isLoading: boolean;
-	onLoad?: (sdk: FrameSDK) => void;
+	onLoad?: (sdk: FrameSDK) => Promise<void>;
 	hasRunOnLoad: boolean;
-	ready: () => void;
 	deferReady: boolean;
-	onReady?: (sdk: FrameSDK) => void;
-	hasRunOnReady: boolean;
 	context?: Context.FrameContext;
-	options?: Partial<ReadyOptions>;
+	isFrame: boolean;
+	isFrameAdded: boolean;
 };
 
 export const frameStore = create<FrameStore>()(
@@ -27,81 +25,52 @@ export const frameStore = create<FrameStore>()(
 		onLoad: undefined,
 		hasRunOnLoad: false,
 		deferReady: false,
-		onReady: undefined,
-		hasRunOnReady: false,
 		context: undefined,
-		options: undefined,
-
-		ready: () => {
-			const { isSdkLoaded, options, onReady, hasRunOnReady, sdk } = get();
-
-			if (!isSdkLoaded) {
-				console.warn('🟡 Cannot call ready() before the SDK is loaded.');
-				return;
-			}
-
-			if (hasRunOnReady) {
-				console.warn('🟡 SDK can only be initialized with `ready()` once.');
-				return;
-			}
-
-			try {
-				sdk.actions.ready(options);
-				onReady?.(sdk);
-
-				// update hasRunOnReady to prevent redundant calls
-				set({ hasRunOnReady: true });
-			} catch (error) {
-				console.error('🔴 Error in onReady callback:', error);
-			}
-		},
+		isFrame: false,
+		isFrameAdded: false,
 
 		loadSdk: async () => {
 			if (get().isSdkLoaded || get().isLoading) return;
 			set({ isLoading: true });
 
-			const context = await sdk.context;
 			try {
+				const context = await sdk.context;
+
+				// if no context is available, the sdk is not running in a frame
+				if (!context) {
+					console.warn('Frame SDK has been loaded, but no context is available.');
+					set({ isSdkLoaded: true, isLoading: false });
+					return;
+				}
+
 				set({
-					isSdkLoaded: !!context,
-					isLoading: false,
-					context: context,
+					context,
+					isSdkLoaded: true,
+					isFrame: true,
+					isFrameAdded: context.client.added ?? false,
 				});
 
-				if (context) {
-					registerFrameEventListeners(sdk);
+				registerFrameEventListeners(sdk);
 
-					const storedOnLoad = get().onLoad;
-					if (storedOnLoad && !get().hasRunOnLoad) {
-						try {
-							storedOnLoad(sdk);
-							set({ hasRunOnLoad: true });
-						} catch (error) {
-							console.error('🔴 Error in onLoad callback:', error);
-						}
-					}
-
-					// immediately call ready && onReady if deferReady was not explicitly set
-					if (!get().deferReady) {
-						sdk.actions.ready(get().options);
-
-						const storedOnReady = get().onReady;
-						if (storedOnReady && !get().hasRunOnReady) {
-							try {
-								storedOnReady(sdk);
-								set({ hasRunOnReady: true });
-							} catch (error) {
-								console.error('🔴 Error in onReady callback:', error);
-							}
-						}
+				// call onLoad callback if it exists
+				const storedOnLoad = get().onLoad;
+				if (storedOnLoad && !get().hasRunOnLoad) {
+					try {
+						await storedOnLoad(sdk);
+						set({ hasRunOnLoad: true });
+					} catch (error) {
+						console.error('🔴 Error in onLoad callback:', error);
+						set({ hasRunOnLoad: false, isLoading: false });
+						return;
 					}
 				}
+
+				// immediately call ready if deferReady was not explicitly set
+				if (!get().deferReady) sdk.actions.ready();
+				set({ isLoading: false });
 			} catch (error) {
-				console.error('🟡 Failed to load frame-sdk:', error);
-				set({
-					isSdkLoaded: false,
-					context: undefined,
-				});
+				console.error('🟡 Failed to load Frame SDK:', error);
+				set({ isSdkLoaded: false, isLoading: false, context: undefined, isFrame: false });
 			}
 		},
 	}))

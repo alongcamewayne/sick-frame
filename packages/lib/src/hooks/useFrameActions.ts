@@ -13,7 +13,9 @@ const ACTIONS: (keyof FrameActions)[] = [
 	'setPrimaryButton',
 	'addFrame',
 	'signIn',
+	'swap',
 	'viewProfile',
+	'viewToken',
 ] as const;
 
 function getWarningMessage(actionName: string) {
@@ -21,7 +23,7 @@ function getWarningMessage(actionName: string) {
 }
 
 export function useFrameActions() {
-	const { sdk, isSdkLoaded, ready } = useFrameSdk();
+	const { sdk, isFrame } = useFrameSdk();
 
 	const fallbackActions = useMemo(
 		() =>
@@ -48,7 +50,7 @@ export function useFrameActions() {
 	);
 
 	return useMemo(() => {
-		if (!isSdkLoaded || !sdk) return fallbackActions;
-		return { ...sdkActions, ready };
-	}, [isSdkLoaded, sdk, fallbackActions, sdkActions, ready]);
+		if (!isFrame) return fallbackActions;
+		return sdkActions;
+	}, [isFrame, sdk, fallbackActions, sdkActions]);
 }
