@@ -18,7 +18,7 @@ export type FrameEventHandlers = Partial<{
 	[K in keyof FrameEvents]: (data: FrameEvents[K]) => void;
 }>;
 
-export const events = mitt<FrameEvents>();
+const events = mitt<FrameEvents>();
 
 export function registerFrameEventListeners(sdk: FrameSDK) {
 	sdk.on('frameAdded', (data: FrameEvents['onFrameAdded']) => {

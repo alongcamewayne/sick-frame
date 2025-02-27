@@ -1,11 +1,12 @@
+'use client';
+
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import sdk from '@farcaster/frame-sdk/';
 import type { FrameSDK } from '@farcaster/frame-sdk/dist/types';
 import { registerFrameEventListeners } from './hooks/useFrameEvents';
 
 export type FrameStore = {
-	sdk: FrameSDK;
+	sdk: FrameSDK | undefined;
 	isSdkLoaded: boolean;
 	loadSdk: () => void;
 	isLoading: boolean;
@@ -18,7 +19,7 @@ export type FrameStore = {
 
 export const frameStore = create<FrameStore>()(
 	immer((set, get) => ({
-		sdk,
+		sdk: undefined,
 		isSdkLoaded: false,
 		isLoading: false,
 		onLoad: undefined,
@@ -32,7 +33,16 @@ export const frameStore = create<FrameStore>()(
 			set({ isLoading: true });
 
 			try {
-				const context = await sdk.context;
+				// check if running in browser
+				if (typeof window === 'undefined') {
+					console.warn('Frame SDK can only be loaded in a browser environment.');
+					set({ isSdkLoaded: false, isLoading: false });
+					return;
+				}
+
+				// import sdk
+				const importedSdk = (await import('@farcaster/frame-sdk')).default as unknown as FrameSDK;
+				const context = await importedSdk.context;
 
 				// if no context is available, the sdk is not running in a frame
 				if (!context) {
@@ -42,29 +52,29 @@ export const frameStore = create<FrameStore>()(
 				}
 
 				set({
+					sdk: importedSdk,
 					isSdkLoaded: true,
 					isFrame: true,
 					isFrameAdded: context.client.added ?? false,
 				});
 
-				registerFrameEventListeners(sdk);
+				registerFrameEventListeners(importedSdk);
 
 				// call onLoad callback if it exists
 				const storedOnLoad = get().onLoad;
 				if (storedOnLoad && !get().hasRunOnLoad) {
 					try {
-						await storedOnLoad(sdk);
-						set({ hasRunOnLoad: true });
+						await storedOnLoad(importedSdk);
+						set({ hasRunOnLoad: true, isLoading: false });
 					} catch (error) {
 						console.error('🔴 Error in onLoad callback:', error);
 						set({ hasRunOnLoad: false, isLoading: false });
 						return;
 					}
 				}
-				set({ isLoading: false });
 
 				// immediately call ready if deferReady was not explicitly set
-				if (!get().deferReady) sdk.actions.ready();
+				if (!get().deferReady) importedSdk.actions.ready();
 			} catch (error) {
 				console.error('🟡 Failed to load Frame SDK:', error);
 				set({ isSdkLoaded: false, isLoading: false, isFrame: false });

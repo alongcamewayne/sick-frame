@@ -1,22 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { FrameStore } from '../store';
+import type { FrameSDK } from '@farcaster/frame-sdk/dist/types';
 import { useFrameSdk } from './useFrameSdk';
 
-export type FrameActions = FrameStore['sdk']['actions'];
-
-const ACTIONS: (keyof FrameActions)[] = [
-	'ready',
-	'openUrl',
-	'close',
-	'setPrimaryButton',
-	'addFrame',
-	'signIn',
-	'swap',
-	'viewProfile',
-	'viewToken',
-] as const;
+type FrameActions = FrameSDK['actions'];
 
 function getWarningMessage(actionName: string) {
 	return `🟡 Cannot call ${actionName}() before Frame SDK has been initialized.`;
@@ -24,33 +12,29 @@ function getWarningMessage(actionName: string) {
 
 export function useFrameActions() {
 	const { sdk, isFrame } = useFrameSdk();
+	const actionKeys = useMemo(() => Object.keys({} as FrameActions) as (keyof FrameActions)[], []);
 
 	const fallbackActions = useMemo(
 		() =>
 			Object.fromEntries(
-				ACTIONS.map((name) => [
-					name as keyof FrameActions,
-					() => console.warn(getWarningMessage(name)),
-				])
+				actionKeys.map((name) => [name, () => console.warn(getWarningMessage(name))])
 			) as unknown as FrameActions,
-		[]
+		[actionKeys]
 	);
 
 	const sdkActions = useMemo(
 		() =>
 			Object.fromEntries(
-				ACTIONS.map((name) => [
+				actionKeys.map((name) => [
 					name,
-					(...args: unknown[]) => {
-						return sdk ? (sdk.actions as any)[name](...args) : undefined;
-					},
+					(...args: unknown[]) => (sdk ? (sdk.actions as any)[name](...args) : undefined),
 				])
 			) as FrameActions,
-		[sdk]
+		[sdk, actionKeys]
 	);
 
 	return useMemo(() => {
 		if (!isFrame) return fallbackActions;
 		return sdkActions;
-	}, [isFrame, sdk, fallbackActions, sdkActions]);
+	}, [isFrame, fallbackActions, sdkActions]);
 }
