@@ -6,31 +6,47 @@ import { useFrameSdk } from './useFrameSdk';
 
 type FrameActions = FrameSDK['actions'];
 
+const ACTIONS: (keyof FrameActions)[] = [
+	'addFrame',
+	'close',
+	'openUrl',
+	'ready',
+	'setPrimaryButton',
+	'signIn',
+	'swap',
+	'viewProfile',
+	'viewToken',
+] as const;
+
 function getWarningMessage(actionName: string) {
 	return `🟡 Cannot call ${actionName}() before Frame SDK has been initialized.`;
 }
 
 export function useFrameActions() {
 	const { sdk, isFrame } = useFrameSdk();
-	const actionKeys = useMemo(() => Object.keys({} as FrameActions) as (keyof FrameActions)[], []);
 
 	const fallbackActions = useMemo(
 		() =>
 			Object.fromEntries(
-				actionKeys.map((name) => [name, () => console.warn(getWarningMessage(name))])
+				ACTIONS.map((name) => [
+					name as keyof FrameActions,
+					() => console.warn(getWarningMessage(name)),
+				])
 			) as unknown as FrameActions,
-		[actionKeys]
+		[]
 	);
 
 	const sdkActions = useMemo(
 		() =>
 			Object.fromEntries(
-				actionKeys.map((name) => [
+				ACTIONS.map((name) => [
 					name,
-					(...args: unknown[]) => (sdk ? (sdk.actions as any)[name](...args) : undefined),
+					(...args: unknown[]) => {
+						return sdk ? (sdk.actions as any)[name](...args) : undefined;
+					},
 				])
 			) as FrameActions,
-		[sdk, actionKeys]
+		[sdk]
 	);
 
 	return useMemo(() => {
