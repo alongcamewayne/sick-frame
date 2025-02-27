@@ -17,7 +17,6 @@ export function useFrameContext() {
 		async function checkContext() {
 			const context = await sdk?.context;
 			if (context) setContext(context);
-			else setContext(fallbackContext);
 		}
 
 		checkContext();
