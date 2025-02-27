@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import sdk, { type Context } from '@farcaster/frame-sdk/';
+import sdk from '@farcaster/frame-sdk/';
 import type { FrameSDK } from '@farcaster/frame-sdk/dist/types';
 import { registerFrameEventListeners } from './hooks/useFrameEvents';
 
@@ -12,7 +12,6 @@ export type FrameStore = {
 	onLoad?: (sdk: FrameSDK) => Promise<void>;
 	hasRunOnLoad: boolean;
 	deferReady: boolean;
-	context?: Context.FrameContext;
 	isFrame: boolean;
 	isFrameAdded: boolean;
 };
@@ -25,7 +24,6 @@ export const frameStore = create<FrameStore>()(
 		onLoad: undefined,
 		hasRunOnLoad: false,
 		deferReady: false,
-		context: undefined,
 		isFrame: false,
 		isFrameAdded: false,
 
@@ -44,7 +42,6 @@ export const frameStore = create<FrameStore>()(
 				}
 
 				set({
-					context,
 					isSdkLoaded: true,
 					isFrame: true,
 					isFrameAdded: context.client.added ?? false,
@@ -64,13 +61,13 @@ export const frameStore = create<FrameStore>()(
 						return;
 					}
 				}
+				set({ isLoading: false });
 
 				// immediately call ready if deferReady was not explicitly set
 				if (!get().deferReady) sdk.actions.ready();
-				set({ isLoading: false });
 			} catch (error) {
 				console.error('🟡 Failed to load Frame SDK:', error);
-				set({ isSdkLoaded: false, isLoading: false, context: undefined, isFrame: false });
+				set({ isSdkLoaded: false, isLoading: false, isFrame: false });
 			}
 		},
 	}))

@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react';
 import mitt from 'mitt';
 import type { EventMap, FrameSDK } from '@farcaster/frame-sdk/dist/types';
-import { useFrameSdk } from './useFrameSdk';
 import { frameStore } from '../store';
+import { useFrameSdk } from './useFrameSdk';
 
 // assumes EventMap will only contain function with a single argument
 type FirstArg<T> = T extends (arg: infer P, ...args: unknown[]) => unknown ? P : void;

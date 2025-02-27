@@ -12,7 +12,7 @@ type UseFrameSdkParams = {
 
 export function useFrameSdk(params: UseFrameSdkParams = {}) {
 	// subscribe to the store so that changes trigger re-renders
-	const { isSdkLoaded, isLoading, isFrame, isFrameAdded, loadSdk, context, sdk } = useStore(
+	const { isSdkLoaded, isLoading, isFrame, isFrameAdded, loadSdk, sdk } = useStore(
 		frameStore,
 		(state) => state
 	);
@@ -34,5 +34,5 @@ export function useFrameSdk(params: UseFrameSdkParams = {}) {
 		if (!isSdkLoaded && !isLoading) loadSdk();
 	}, [isSdkLoaded, isLoading, loadSdk]);
 
-	return { isFrame, isFrameAdded, sdk, context };
+	return { sdk, isFrame, isFrameAdded };
 }
